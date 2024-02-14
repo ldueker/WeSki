@@ -17,23 +17,23 @@ class SkiVacationApp:
         num_guests = int(input("Enter the number of guests: "))
         skiing_preferences = input("Enter Ski Preferences (Moguls, Trees, or Groomers): ")
         town_importance = input("Rate the importance of the ski town from: Not Important, Somewhat Important, Very Important, Most Important: ")
-        lower_budget = int(input("input the minimum amount willing to spend on entire vacation: "))
-        higher_budget = int(input("input the maximum amount willing to spend on entire vacation: "))
-        budget = (lower_budget,higher_budget)
+        vacationLength = input("How Long will your vacation be?")
+        budget = int(input("input the maximum amount willing to spend on entire vacation: "))
+        #NEED WORK:  RELATE BUDGET TO RESORT INTO TIERS FOR LODGING, FOOD, ETC.        
         
-        
-
-        # Extract relevant information
+        # rank Resorts based on input
         ranked_resort = self.rank_resorts(skiing_ability, budget, num_guests, skiing_preferences, town_importance)
         print(ranked_resort)
         location = input("Please select your resort from the list of rankings for more recommendations: ")
-        # resortDF = pd.read_csv ('skiResortData.csv')
-        # resortDF['resort_name'] = resortDF['resort_name'].str.split(',').str[0]
+
+        resortDF = pd.read_csv ('skiResortData.csv')
+        resortDF['resort_name'] = resortDF['resort_name'].str.split(',').str[0]
         # isValidResort = location in [resortDF['resort_name']]
         #FIX TO CHECK IF RESORT SELECTED IS REAL
         
+        #Make Recs
         print("\nRecommendations:")
-        print(f"- Food:", self.food_recommendations(location,budget))
+        print(f"- Food:", self.food_recommendations(location,budget,num_guests))
         print(f"- Lodging:", self.lodging_recommendations(location,budget,num_guests))
         print(f"- Equipment Rentals:", self.equipment_recommendations(location,budget,num_guests,skiing_ability))
         print(f"- Nearby Amenities:", self.ammenities_recommendations(location, budget, num_guests))
@@ -51,27 +51,59 @@ class SkiVacationApp:
          """),
          ("user", "{input}")
         ])
+        #Create Output Parser
         output_parser = StrOutputParser()
+        #Create Chain
         chain = prompt | llm | output_parser
+        #Combine Inputs
         fullInput = [skiing_ability,budget, num_guests, ski_preferences, town_importance]
         
+        #Invoke chain to get resort rankings
         resortsRanked = chain.invoke({"input": fullInput})
 
         return resortsRanked
     
     def predict_lift_queue(self, location, skiing_ability, num_guests, ski_preferences):
-        # Add logic to predict lift queue time based on skiing ability, resort popularity, etc.
-        # For simplicity, this example returns a static value.
-        # Return values for each of the most common lifts
+        # Divide Resort Dataframe into tiers
+        # Higher tier (more popular) should reflect higher wait times, especially for beginner/intermediate terrain
+        #Return lift queue based on location tier, num guests, and ski ability/preferences
         return "Short"
     
-    def food_recommendations(self,location,budget,start_date,end_date):
-        #LLM call to recommend food in the area for a given price point
-        return 0
+    def food_recommendations(self,location,budget,num_guests):
+        prompt = ChatPromptTemplate.from_messages([
+        ("system", 
+         """
+            You recommend resturants and food spots in ski towns for a given location.
+            The user will provie a location, budget, and number of guests as a list in this format: [location,budget, num_guests].
+            You will return a list of the best potential resturants in the area, taking into consideration the budget and the review for the resturaunt.
+            Every resturant you recommend must exist, and be near the location provided.
+         """),
+         ("user", "{input}")
+        ])
+        output_parser = StrOutputParser()
+        chain = prompt | llm | output_parser
+        fullInput = [location,budget, num_guests]
+        
+        foodRecs = chain.invoke({"input": fullInput})
+        return foodRecs
     
-    def lodging_recommendations(self,location,budget,num_guests,start_date,end_date, town_importance):
-        #LLM call to recommend lodging in the area for a given price point
-        return 0
+    def lodging_recommendations(self,location,budget,num_guests):
+        prompt = ChatPromptTemplate.from_messages([
+        ("system", 
+         """
+            You recommend lodging and hotels in ski towns for a given location.
+            The user will provie a location, budget, and number of guests as a list in this format: [location,budget, num_guests].
+            You will return a list of potential lodging and hotels in the area, taking into consideration the budget.
+            Every resturant you recommend must exist, and be near the location provided.
+         """),
+         ("user", "{input}")
+        ])
+        output_parser = StrOutputParser()
+        chain = prompt | llm | output_parser
+        fullInput = [location,budget, num_guests]
+        
+        lodgingRecs = chain.invoke({"input": fullInput})
+        return lodgingRecs
     
     def equipment_recommendations(self,location,budget,num_guests,start_date,end_date,skiing_ability):
         #LLM call to recommend equipment rentals
